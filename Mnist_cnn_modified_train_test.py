@@ -1,0 +1,120 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 23:25:14 2019
+
+@author: Jagabandhu
+"""
+import os
+import keras
+from keras.datasets import mnist
+from mnist import MNIST
+import matplotlib.pyplot as plt
+from keras.models import Sequential
+from sklearn.utils import shuffle
+import h5py
+#from __future__ import print_function
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+from keras import backend as K
+#############################################################################################################
+batch_size = 128
+num_classes = 10
+img_rows, img_cols = 28, 28
+
+
+data = loadmat('/home/sidistic/MNIST_data/mnist_modified_image_test.mat',matlab_compatible='True')
+x_test = data['modified_image']
+
+data = loadmat('/home/sidistic/MNIST_data/mnist_modified_image_train.mat',matlab_compatible='True')
+x_train = data['modified_image']
+
+
+data = loadmat('/home/sidistic/MNIST_data/mnist_image_label_test.mat',matlab_compatible='True')
+y_test = data['label']
+
+data = loadmat('/home/sidistic/MNIST_data/mnist_image_label_train.mat',matlab_compatible='True')
+y_train = data['label']
+
+
+[x_train,y_train]=shuffle(x_train,y_train)
+# input image dimensions
+
+#mndata = MNIST('/home/sidistic/MNIST_data')
+
+#images, labels = mndata.load_training()
+#(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+
+########################################################################################################
+
+fig = plt.figure()
+for i in range(16):
+  plt.subplot(4,4,i+1)
+  plt.tight_layout()
+  plt.imshow(x_train[i], cmap='gray', interpolation='none')
+  plt.title("Digit: {}".format(y_train[i]))
+  plt.xticks([])
+  plt.yticks([])
+fig
+
+if K.image_data_format() == 'channels_first':
+    x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
+    x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
+    input_shape = (1, img_rows, img_cols)
+else:
+    x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
+    x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
+    input_shape = (img_rows, img_cols, 1)
+
+x_train = x_train.astype('float32')
+x_test = x_test.astype('float32')
+x_train /= 255
+x_test /= 255
+print('x_train shape:', x_train.shape)
+print(x_train.shape[0], 'train samples')
+print(x_test.shape[0], 'test samples')
+
+# convert class vectors to binary class matrices
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+##############################################################################################################
+model = Sequential()
+model.add(Conv2D(32, kernel_size=(3, 3),
+                 activation='relu',
+                 input_shape=input_shape))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+#model.add(Dropout(0.5))
+model.add(Dense(num_classes, activation='softmax'))
+
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model_log=model.fit(x_train, y_train, epochs=30, batch_size=200, validation_split=0.10)
+
+#######################################################################################################
+score = model.evaluate(x_test, y_test, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])# plotting the metrics
+
+model.summary()
+model.save('cnn_10class_modified.h5')
+#####################################################################################################
+fig = plt.figure()
+plt.subplot(2,1,1)
+plt.plot(model_log.history['acc'])
+plt.plot(model_log.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='lower right')
+plt.subplot(2,1,2)
+plt.plot(model_log.history['loss'])
+plt.plot(model_log.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper right')
+plt.tight_layout()
+fig
